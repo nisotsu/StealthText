@@ -1,6 +1,7 @@
 import argparse
 import mimetypes
 import base64
+import lzma
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -55,13 +56,6 @@ def parse_arguments():
         "-o", "--output-file",
         type=str,
         help="書き込みファイルのパス."
-    )
-
-    # バイナリで書き込むか否かを指定するオプション引数
-    parser.add_argument(
-        "-b", "--binary-write",
-        action="store_true",
-        help="バイナリで出力するかの指定."
     )
     
     return parser.parse_args()
@@ -120,7 +114,7 @@ def variation_selector_to_byte(variation_selector: str) -> int | None:
     else:
         return None
 
-def decode(variation_selectors: str) -> list[int]:
+def decode(variation_selectors: str) -> str:
     if not variation_selectors:
         raise('target_string is none.')
     result = []
@@ -139,6 +133,12 @@ def is_text_file(file_path):
     mime_type = mimetypes.guess_type(file_path)[0]
     return mime_type is not None and mime_type.startswith("text")
 
+def compress(s):
+    return lzma.compress(s)
+
+def decompress(s):
+    return lzma.decompress(s)
+
 if __name__ == '__main__':
     args = parse_arguments()
     # target_str
@@ -151,12 +151,12 @@ if __name__ == '__main__':
             if is_text_file(args.input_file):
                 with open(args.input_file, mode='r', encoding='utf-8') as f:
                     hidden_data = f.read()
-                    print(hidden_data)
             else:
                 with open(args.input_file, mode='br') as f:
                     hidden_data = f.read()
+                    if args.compress:
+                        hidden_data = compress(hidden_data)
                     hidden_data = base64.b64encode(hidden_data).decode('utf-8')
-                    print(hidden_data)
         else:
             hidden_data = input('Hidden string:')
         result = encode(target_str, hidden_data)
@@ -171,12 +171,14 @@ if __name__ == '__main__':
                 target_str = f.read()
         result = decode(target_str)
         if args.output_file:
-            if args.binary_write:
-                with open(args.output_file, mode='bw') as f:
-                    result = base64.b64decode(result)
+            if is_text_file(args.output_file):
+                with open(args.output_file, mode='w', encoding='utf-8') as f:
                     f.write(result)
             else:
-                with open(args.output_file, mode='w', encoding='utf-8') as f:
+                with open(args.output_file, mode='bw') as f:
+                    result = base64.b64decode(result)
+                    if args.decompress:
+                        result = decompress(result)
                     f.write(result)
         else:
             print(result)
