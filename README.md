@@ -26,3 +26,5 @@ Extract embedded data.
 ```
 python stealth_text.py -i out.txt -o bigcat.mp4 -d --decode
 ```
+## References
+[Smuggling arbitrary data through an emoji](https://paulbutler.org/2025/smuggling-arbitrary-data-through-an-emoji/)
